@@ -1,28 +1,31 @@
 import subprocess
-import os
-from typing import overload
 
-PATH_LDP = '"' + "C:\LDPlayer\LDPlayer4.0" + '"'
+PATH_LDP = '"' + "C:\LDPlayer\LDPlayer4.0\ldconsole.exe" + '"'
 
 
 class LDPlayers ():
     def __init__(self, path: str = PATH_LDP) -> None:
-        print(subprocess.Popen(path + ' --version', shell=True))
+        sp = subprocess.Popen(path, shell=True, stdout=subprocess.PIPE)
+        if "dnplayer Command Line Management Interface" not in sp.stdout.readline().decode():
+            raise SystemError ("Ldconsole not found")
         self.path = path
 
     def find_by_index(self, index: int):
-        list = str(subprocess.Popen(self.path + " list", shell=True))
-        if index < (len(list.split("\n"))) :
+        sp = subprocess.Popen(self.path + " list", shell=True, stdout=subprocess.PIPE)
+        count = -1
+        while sp.stdout.readline():
+            count += 1
+        if index >-1 and index <=count  :
             return LDPlayer(path = self.path, index=index)
         else :
             raise ValueError("LDPlayer is not found")
     
     def find_by_name(self, name: str):
-        list = str(subprocess.Popen(self.path + " list", shell=True))
-        if name in (list.split("\n")) :
-            return LDPlayer(path = self.path, name=name)
-        else :
-            raise ValueError("LDPlayer is not found")
+        sp = subprocess.Popen(self.path + " list", shell=True, stdout=subprocess.PIPE)
+        while line := sp.stdout.readline().decode().strip():
+            if name == line:
+                return LDPlayer(path = self.path, name=name)
+        raise ValueError("LDPlayer is not found")
 
     def show(self):
         print(subprocess.Popen(self.path + " list", shell=True))
@@ -44,19 +47,19 @@ class LDPlayers ():
 
 
 class LDPlayer ():
-    @overload
-    def __init__(self, path: str, name: str) -> None:
-        self.name = name
-        self.path = path
-
-    @overload
-    def __init__(self, path: str, index: int) -> None:
-        self.index = index
-        self.path = path
+    def __init__(self, path: str, index: int = None ,name: str = None) -> None:
+        if index != None:
+            self.index = str(index)
+            self.path = path
+            self.name = None
+        elif name :
+            self.name = name
+            self.path = path
+            self.index = None
 
     def setup(self, resolution: list[int, int, int], cpu: int, memory: int, manufacturer: str, model: str, pnumber: str, imei: str, imsi: str, simserial: str, androidid: str, mac: str, autorotate: bool, lockwindow: bool) -> None:
         if self.index:
-            cmd = " modify --index " + self.index
+            cmd = " modify --index " + str(self.index)
         elif self.name:
             cmd = " modify --name " + self.name
 
