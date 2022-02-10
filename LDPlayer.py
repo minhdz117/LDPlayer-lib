@@ -7,52 +7,55 @@ class LDPlayers ():
     def __init__(self, path: str = PATH_LDP) -> None:
         sp = subprocess.Popen(path, shell=True, stdout=subprocess.PIPE)
         if "dnplayer Command Line Management Interface" not in sp.stdout.readline().decode():
-            raise SystemError ("Ldconsole not found")
+            raise SystemError("Ldconsole not found")
         self.path = path
 
     def find_by_index(self, index: int):
-        sp = subprocess.Popen(self.path + " list", shell=True, stdout=subprocess.PIPE)
+        sp = subprocess.Popen(self.path + " list",
+                              shell=True, stdout=subprocess.PIPE)
         count = -1
         while sp.stdout.readline():
             count += 1
-        if index >-1 and index <=count  :
-            return LDPlayer(path = self.path, index=index)
-        else :
+        if index > -1 and index <= count:
+            return LDPlayer(path=self.path, index=index)
+        else:
             raise ValueError("LDPlayer is not found")
-    
+
     def find_by_name(self, name: str):
-        sp = subprocess.Popen(self.path + " list", shell=True, stdout=subprocess.PIPE)
+        sp = subprocess.Popen(self.path + " list",
+                              shell=True, stdout=subprocess.PIPE)
         while line := sp.stdout.readline().decode().strip():
             if name == line:
-                return LDPlayer(path = self.path, name=name)
+                return LDPlayer(path=self.path, name=name)
         raise ValueError("LDPlayer is not found")
 
     def show(self):
         print(subprocess.Popen(self.path + " list", shell=True))
 
-    def create(self, name:str):
+    def create(self, name: str):
         print(subprocess.Popen(self.path + " add --name " + name, shell=True))
 
-    def delete_by_name(self, name:str):
+    def delete_by_name(self, name: str):
         print(subprocess.Popen(self.path + " remove --name " + name, shell=True))
 
-    def delete_by_index(self, index:int):
+    def delete_by_index(self, index: int):
         print(subprocess.Popen(self.path + " remove --index " + index, shell=True))
 
-    def copy(self, name:str ,fromName:str):
-        print(subprocess.Popen(self.path + " copy --name " + name + " --from " + fromName, shell=True))
+    def copy(self, name: str, fromName: str):
+        print(subprocess.Popen(self.path + " copy --name " +
+              name + " --from " + fromName, shell=True))
 
     def quitall(self):
         print(subprocess.Popen(self.path + " quitall", shell=True))
 
 
 class LDPlayer ():
-    def __init__(self, path: str, index: int = None ,name: str = None) -> None:
+    def __init__(self, path: str, index: int = None, name: str = None) -> None:
         if index != None:
             self.index = str(index)
             self.path = path
             self.name = None
-        elif name :
+        elif name:
             self.name = name
             self.path = path
             self.index = None
@@ -77,7 +80,8 @@ class LDPlayer ():
             if memory in [256, 512, 1024, 2048, 4096, 6144, 8192]:
                 cmd += " --memory " + memory
             else:
-                raise ValueError("Value must be 256, 512, 1024, 2048, 4096, 6144, 8192")
+                raise ValueError(
+                    "Value must be 256, 512, 1024, 2048, 4096, 6144, 8192")
 
         if manufacturer:
             cmd += " --manufacturer " + manufacturer
@@ -110,7 +114,7 @@ class LDPlayer ():
             cmd += " --autorotate " + int(autorotate)
 
         if lockwindow:
-            cmd += " --lockwindow" + int(lockwindow)
+            cmd += " --lockwindow " + int(lockwindow)
 
         print(subprocess.Popen(self.path + cmd, shell=True))
 
