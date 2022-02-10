@@ -37,7 +37,7 @@ class LDPlayers ():
         print(subprocess.Popen(self.path + " remove --name " + name, shell=True))
 
     def delete_by_index(self, index:int):
-        print(subprocess.Popen(self.path + " remove --name " + index, shell=True))
+        print(subprocess.Popen(self.path + " remove --index " + index, shell=True))
 
     def copy(self, name:str ,fromName:str):
         print(subprocess.Popen(self.path + " copy --name " + name + " --from " + fromName, shell=True))
