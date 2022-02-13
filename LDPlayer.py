@@ -1,6 +1,30 @@
+from email.mime import image
 import subprocess
-
+import os
+import time
+import cv2
+import numpy as np
 PATH_LDP = '"' + "C:\LDPlayer\LDPlayer4.0\ldconsole.exe" + '"'
+
+
+class Keys():
+    HOME = '3'
+    BACK = '4'
+    CALL = '5'
+    END_CALL = '6'
+    VOL_UP = '24'
+    VOL_DOWN = '25'
+    POWER = '26'
+    CAMERA = '27'
+    BROWSER = '64'
+    ENTER = '66'
+    BACKSPACE = '67'
+    PHONEBOOK = '207'
+    LIGHT_UP = '220'
+    LIGHT_DOWN = '221'
+    CUT = '277'
+    COPY = '278'
+    PATSE = '279'
 
 
 class LDPlayers ():
@@ -9,6 +33,7 @@ class LDPlayers ():
         if "dnplayer Command Line Management Interface" not in sp.stdout.readline().decode():
             raise SystemError("Ldconsole not found")
         self.path = path
+        subprocess.Popen(f"""{path} adb --index 0 --command "start-server" """)
 
     def find_by_index(self, index: int):
         sp = subprocess.Popen(self.path + " list",
@@ -88,7 +113,7 @@ class LDPlayer ():
             if model:
                 cmd += " --model " + model
             else:
-                raise ValueError("Value not None")
+                raise ValueError("Model value is not None")
 
         if pnumber:
             cmd += " --pnumber " + pnumber
@@ -133,3 +158,127 @@ class LDPlayer ():
         elif self.index:
             print(subprocess.Popen(self.path +
                   " quit --index " + self.index, shell=True))
+
+    def click(self, x: int, y: int):
+        if self.name:
+            print(subprocess.Popen(self.path + " adb --name " + '"' + self.name +
+                  '"' + " --command " + '"' + "shell input tap " + x + " " + y + '"'))
+        elif self.index:
+            print(subprocess.Popen(self.path + " adb --index " + self.index +
+                  " --command " + '"' + "shell input tap " + x + " " + y + '"'))
+
+    def click_to_image(self, image: str):
+        self.screen_cap()
+        if self.name:
+            pos = self.get_pos_click(os.path.abspath(
+                f"images-screencap/{self.name}.png"), image)
+            if pos:
+                x, y = pos[0]
+                print(subprocess.Popen(self.path + " adb --name " + '"' + self.name +
+                                       '"' + " --command " + '"' + "shell input tap " + str(x) + " " + str(y) + '"'))
+
+        elif self.index:
+            pos = self.get_pos_click(os.path.abspath(
+                f"images-screencap/index{self.index}.png"), image)
+            if pos:
+                x, y = pos[0]
+                print(subprocess.Popen(self.path + " adb --index " + self.index +
+                                       " --command " + '"' + "shell input tap " + str(x) + " " + str(y) + '"'))
+    
+    def wait_image(self, image:str, timeout:int = 10):
+        if self.name:
+            while not self.get_pos_click(os.path.abspath(
+                f"images-screencap/{self.name}.png"), image) and timeout>0:
+                time.sleep(0.5)
+                timeout -=1
+            if timeout<1 :
+                raise TimeoutError("Can't find image on screen")
+            else :
+                return True
+
+        elif self.index:
+            while not self.get_pos_click(os.path.abspath(
+                f"images-screencap/index{self.index}.png"), image) and timeout>0:
+                time.sleep(0.5)
+                timeout -=1
+            if timeout<1 :
+                raise TimeoutError("Can't find image on screen")
+            else :
+                return True
+
+    def send_text(self, text: str):
+        if self.name:
+            print(subprocess.Popen(self.path + " adb --name " + '"' + self.name +
+                  '"' + " --command " + '"' + "shell input text \'" + text + '\'"'))
+        elif self.index:
+            print(subprocess.Popen(self.path + " adb --index " + self.index +
+                  " --command " + '"' + "shell input text \'" + text + '\'"'))
+
+    def send_key_event(self, key: str):
+        if self.name:
+            print(subprocess.Popen(self.path + " adb --name " + '"' + self.name +
+                  '"' + " --command " + '"' + "shell keyevent " + key + '"'))
+        elif self.index:
+            print(subprocess.Popen(self.path + " adb --index " + self.index +
+                  " --command " + '"' + "shell keyevent " + key + '"'))
+
+    def screen_cap(self):
+        if self.name:
+            os.makedirs(os.path.abspath("images-screencap"), exist_ok=True)
+            print(subprocess.Popen(
+                f"""{self.path} adb --name "{self.name}" --command "shell screencap -p /sdcard/{self.name}.png" """, shell=True))
+            time.sleep(0.5)
+            print(subprocess.Popen(
+                f"""{self.path} adb --name "{self.name}" --command "pull /sdcard/{self.name}.png {os.path.abspath("images-screencap")}" """))
+        elif self.index:
+            os.makedirs(os.path.abspath("images-screencap"), exist_ok=True)
+            print(subprocess.Popen(
+                f"""{self.path} adb --index {self.index} --command "shell screencap -p /sdcard/index{self.index}.png" """, shell=True))
+            time.sleep(0.5)
+            print(subprocess.Popen(
+                f"""{self.path} adb --index {self.index} --command "pull /sdcard/index{self.index}.png {os.path.abspath("images-screencap")}" """, shell=True))
+
+    @classmethod
+    def get_pos_click(
+        cls,
+        cap: str,
+        obj: str,
+        center: bool = True,
+        multi: bool = False,
+        threshold: float = 0.8,
+        eps: float = 0.05,
+        show: bool = False
+    ) -> list:
+        img_base = cv2.imread(cap)
+        img_find = cv2.imread(obj)
+        width = img_find.shape[1]
+        height = img_find.shape[0]
+        result = cv2.matchTemplate(img_base, img_find, cv2.TM_CCOEFF_NORMED)
+        pos = []
+        if multi:
+            y_loc, x_loc = np.where(result >= threshold)
+            rectangles = []
+            for x, y in zip(x_loc, y_loc):
+                rectangles.append([int(x), int(y), int(width), int(height)])
+                rectangles.append([int(x), int(y), int(width), int(height)])
+            for x, y, w, h in cv2.groupRectangles(rectangles, 1, eps)[0]:
+                cv2.rectangle(img_base, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                if center:
+                    pos.append((x + w // 2, y + h // 2))
+                else:
+                    pos.append((x, y))
+        else:
+            _, max_val, _, max_loc = cv2.minMaxLoc(result)
+            if max_val > threshold:
+                cv2.rectangle(
+                    img_base, max_loc, (max_loc[0] + width, max_loc[1] + height), (0, 0, 255), 2)
+                if center:
+                    pos.append((max_loc[0] + width // 2,
+                               max_loc[1] + height // 2))
+                else:
+                    pos.append(max_loc)
+        if show:
+            cv2.imshow("show", img_base)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        return pos
